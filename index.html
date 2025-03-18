@@ -1,31 +1,12 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="./style.css">
-    <title>Tale of Sweets</title>
-</head>
-<body>
-
-    <section id="full-images">
-        <div id="intro">
-            <img id="logo" src="Assets/logo.gif">
-        </div>
-        <img id="full" src="Assets/1.png">
-        <img id="full" src="Assets/2.png">
-        <img id="full" src="Assets/3.png">
-    </section>
-
-</body>
-</html> -->
-
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simple AR Image Detection</title>
+  <title>AR Image Detection</title>
+  <!-- Load A-Frame and AR.js libraries first -->
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
     body {
       margin: 0;
@@ -42,7 +23,6 @@
       padding: 10px;
       border-radius: 5px;
       z-index: 10;
-      pointer-events: none;
     }
     
     .controls {
@@ -64,54 +44,72 @@
       border-radius: 5px;
       cursor: pointer;
     }
+    
+    .a-enter-vr {
+      display: none;
+    }
   </style>
 </head>
 <body>
   <div class="ar-overlay">Looking for marker image...</div>
   <div class="controls">
-    <button id="btnInfo">Show Instructions</button>
+    <button id="btnInfo">Show Marker Info</button>
   </div>
   
-  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
-    <!-- Define the marker -->
+  <!-- A-Frame scene with AR.js -->
+  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix;">
+    <!-- HIRO marker with 3D content -->
     <a-marker preset="hiro" id="hiroMarker">
-      <!-- 3D model that will appear on the marker -->
-      <a-box position="0 0.5 0" material="color: red; opacity: 0.7;" scale="1 1 1" animation="property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear;"></a-box>
-      <a-text value="Hello AR World!" position="0 1.25 0" align="center" color="#FFF" scale="1 1 1"></a-text>
+      <!-- 3D content that appears on the marker -->
+      <a-box position="0 0.5 0" material="color: red; opacity: 0.7;" 
+             animation="property: rotation; to: 0 360 0; loop: true; dur: 5000;"></a-box>
+      <a-text value="Hello AR World!" position="0 1.25 0" align="center" color="#FFF"></a-text>
     </a-marker>
     
-    <!-- Custom pattern marker -->
-    <a-marker type="pattern" url="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/data/patt.kanji">
-      <a-sphere position="0 0.5 0" radius="0.5" material="color: blue; opacity: 0.7;" animation="property: position; to: 0 1.5 0; dir: alternate; dur: 2000; loop: true; easing: easeInOutQuad;"></a-sphere>
+    <!-- Custom marker with different content -->
+    <a-marker type="pattern" url="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/data/patt.kanji" id="kanjiMarker">
+      <a-sphere position="0 0.5 0" radius="0.5" material="color: blue; opacity: 0.7;" 
+                animation="property: position; to: 0 1.5 0; dir: alternate; dur: 2000; loop: true;"></a-sphere>
     </a-marker>
     
-    <!-- Camera -->
+    <!-- The camera entity - this is what shows the camera view -->
     <a-entity camera></a-entity>
   </a-scene>
   
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.2.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       const overlay = document.querySelector('.ar-overlay');
       const hiroMarker = document.querySelector('#hiroMarker');
+      const kanjiMarker = document.querySelector('#kanjiMarker');
       const infoButton = document.querySelector('#btnInfo');
       
-      // Update status when marker is found
+      // Update status when HIRO marker is found
       hiroMarker.addEventListener('markerFound', function() {
-        overlay.textContent = 'Marker found! Displaying AR content...';
-        setTimeout(() => { overlay.style.opacity = 0; }, 3000);
+        overlay.textContent = 'HIRO marker found! Showing red cube.';
+        setTimeout(() => { overlay.style.opacity = 0.5; }, 2000);
       });
       
-      // Update status when marker is lost
+      // Update status when HIRO marker is lost
       hiroMarker.addEventListener('markerLost', function() {
         overlay.style.opacity = 1;
-        overlay.textContent = 'Marker lost. Looking for marker...';
+        overlay.textContent = 'Marker lost. Looking for markers...';
       });
       
-      // Show instructions
+      // Update status when Kanji marker is found
+      kanjiMarker.addEventListener('markerFound', function() {
+        overlay.textContent = 'Kanji marker found! Showing blue sphere.';
+        setTimeout(() => { overlay.style.opacity = 0.5; }, 2000);
+      });
+      
+      // Show instructions when button is clicked
       infoButton.addEventListener('click', function() {
-        alert('Instructions:\n\n1. Allow camera access when prompted\n2. Point your camera at the "HIRO" marker image\n3. You can find the HIRO marker by searching for "HIRO marker AR.js" online\n4. When detected, a 3D red cube and text will appear\n5. Alternatively, try the Kanji marker');
+        alert('AR Marker Information:\n\n' +
+              '1. This app looks for two marker images:\n' +
+              '   - HIRO marker (shows a red cube)\n' +
+              '   - Kanji marker (shows a blue sphere)\n\n' +
+              '2. Search for "HIRO marker AR.js" and "Kanji marker AR.js" to find these images\n\n' +
+              '3. Either print the markers or display them on another screen\n\n' +
+              '4. Make sure there is good lighting and the marker is clearly visible');
       });
     });
   </script>
