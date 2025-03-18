@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -17,5 +17,341 @@
         <img id="full" src="Assets/3.png">
     </section>
 
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Image Detection</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+    
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    #video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+    }
+    
+    .ar-content {
+      position: absolute;
+      transform-origin: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    .status {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 20;
+    }
+    
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <video id="video" autoplay muted playsinline></video>
+    <div id="overlay"></div>
+    <div class="status" id="status">Initializing camera...</div>
+    <div class="controls">
+      <button id="startBtn">Start Detection</button>
+      <button id="addMarkerBtn" class="hidden">Add Current Image as Marker</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/opencv.js/4.5.5/opencv.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const video = document.getElementById('video');
+      const overlay = document.getElementById('overlay');
+      const startBtn = document.getElementById('startBtn');
+      const addMarkerBtn = document.getElementById('addMarkerBtn');
+      const statusDiv = document.getElementById('status');
+      
+      let streaming = false;
+      let cv = null;
+      let markers = [];
+      let arContent = [];
+      let detector = null;
+      let cap = null;
+      let processingFrame = false;
+      
+      // Function to load OpenCV
+      function loadOpenCV() {
+        return new Promise((resolve) => {
+          if (window.cv) {
+            resolve(window.cv);
+            return;
+          }
+          
+          // OpenCV.js should be loaded from CDN
+          var script = document.createElement('script');
+          script.onload = () => {
+            cv['onRuntimeInitialized'] = () => {
+              resolve(window.cv);
+            };
+          };
+          statusDiv.textContent = "Loading OpenCV...";
+        });
+      }
+      
+      // Start camera stream
+      async function setupCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+              facingMode: 'environment',
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
+            audio: false
+          });
+          
+          video.srcObject = stream;
+          
+          return new Promise((resolve) => {
+            video.onloadedmetadata = () => {
+              resolve(video);
+            };
+          });
+        } catch (error) {
+          statusDiv.textContent = `Camera error: ${error.message}`;
+          console.error('Camera setup failed:', error);
+          throw error;
+        }
+      }
+      
+      // Initialize the image detector
+      function initDetector() {
+        detector = new cv.ORB(500);
+        statusDiv.textContent = "Detector initialized";
+      }
+      
+      // Add a marker image from the current video frame
+      function addMarker() {
+        if (!cv || !video.videoWidth) return;
+        
+        statusDiv.textContent = "Adding marker...";
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Process the image with OpenCV
+        const src = cv.imread(canvas);
+        const gray = new cv.Mat();
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+        
+        // Compute keypoints and descriptors
+        const keypoints = new cv.KeyPointVector();
+        const descriptors = new cv.Mat();
+        detector.detectAndCompute(gray, new cv.Mat(), keypoints, descriptors);
+        
+        // Store marker info
+        const markerId = markers.length;
+        markers.push({
+          id: markerId,
+          keypoints,
+          descriptors,
+          width: src.cols,
+          height: src.rows,
+        });
+        
+        // Create sample AR content for this marker
+        const content = document.createElement('div');
+        content.className = 'ar-content';
+        content.id = `ar-content-${markerId}`;
+        content.style.width = '200px';
+        content.style.height = '200px';
+        content.style.background = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 0.7)`;
+        content.style.borderRadius = '10px';
+        content.style.display = 'flex';
+        content.style.justifyContent = 'center';
+        content.style.alignItems = 'center';
+        content.style.color = 'white';
+        content.style.fontSize = '24px';
+        content.textContent = `AR Content ${markerId + 1}`;
+        
+        overlay.appendChild(content);
+        arContent.push(content);
+        
+        // Cleanup
+        src.delete();
+        gray.delete();
+        
+        statusDiv.textContent = `Added marker ${markerId + 1}`;
+      }
+      
+      // Process video frames to detect markers
+      function processFrame() {
+        if (!cv || !video.videoWidth || !markers.length || processingFrame) return;
+        
+        processingFrame = true;
+        
+        // Capture current frame
+        const src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+        cap.read(src);
+        
+        // Convert to grayscale
+        const gray = new cv.Mat();
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+        
+        // Detect features
+        const keypoints = new cv.KeyPointVector();
+        const descriptors = new cv.Mat();
+        detector.detectAndCompute(gray, new cv.Mat(), keypoints, descriptors);
+        
+        // For each marker, try to match
+        markers.forEach((marker, index) => {
+          if (descriptors.rows > 0 && marker.descriptors.rows > 0) {
+            // Match descriptors
+            const matches = new cv.DMatchVector();
+            const matcher = new cv.BFMatcher(cv.NORM_HAMMING);
+            matcher.match(marker.descriptors, descriptors, matches);
+            
+            // Sort matches by distance
+            const dists = [];
+            for (let i = 0; i < matches.size(); i++) {
+              dists.push(matches.get(i).distance);
+            }
+            dists.sort((a, b) => a - b);
+            
+            // Filter good matches
+            const goodMatches = new cv.DMatchVector();
+            const threshold = Math.min(50, 3 * dists[0]);
+            
+            for (let i = 0; i < matches.size(); i++) {
+              if (matches.get(i).distance <= threshold) {
+                goodMatches.push_back(matches.get(i));
+              }
+            }
+            
+            // If enough good matches, consider it detected
+            if (goodMatches.size() >= 10) {
+              // Display AR content
+              const arElement = arContent[index];
+              arElement.style.opacity = "1";
+              
+              // Simple positioning at center (in a real app, you'd do perspective transform)
+              arElement.style.left = `${video.videoWidth / 2 - 100}px`;
+              arElement.style.top = `${video.videoHeight / 2 - 100}px`;
+              
+              statusDiv.textContent = `Detected marker ${index + 1}!`;
+            } else {
+              // Hide AR content
+              if (arContent[index]) {
+                arContent[index].style.opacity = "0";
+              }
+            }
+            
+            // Clean up
+            matches.delete();
+            goodMatches.delete();
+          }
+        });
+        
+        // Clean up
+        src.delete();
+        gray.delete();
+        keypoints.delete();
+        descriptors.delete();
+        
+        processingFrame = false;
+      }
+      
+      // Main function to start everything
+      async function start() {
+        try {
+          // Setup camera
+          await setupCamera();
+          video.play();
+          streaming = true;
+          
+          startBtn.classList.add('hidden');
+          addMarkerBtn.classList.remove('hidden');
+          
+          // Initialize OpenCV
+          cv = await loadOpenCV();
+          statusDiv.textContent = "OpenCV loaded";
+          
+          // Initialize detector
+          initDetector();
+          
+          // Set up video capture
+          cap = new cv.VideoCapture(video);
+          
+          // Start processing frames
+          addMarkerBtn.addEventListener('click', addMarker);
+          
+          // Process frames at 30fps
+          setInterval(processFrame, 33);
+          
+          statusDiv.textContent = "Ready! Add a marker to begin.";
+        } catch (error) {
+          statusDiv.textContent = `Error: ${error.message}`;
+          console.error('Startup error:', error);
+        }
+      }
+      
+      // Initialize
+      startBtn.addEventListener('click', start);
+    });
+  </script>
 </body>
 </html>
