@@ -58,21 +58,24 @@
   
   <!-- A-Frame scene with AR.js -->
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix;">
-    <!-- HIRO marker with 3D content -->
+    <!-- HIRO marker with layered PNGs from the web -->
     <a-marker preset="hiro" id="hiroMarker">
-      <!-- 3D content that appears on the marker -->
-      <a-box position="0 0.5 0" material="color: red; opacity: 0.7;" 
-             animation="property: rotation; to: 0 360 0; loop: true; dur: 5000;"></a-box>
+      <a-image src="https://www.pngkey.com/png/full/0-8589_star-png.png" position="0 0.2 0" width="1" height="1" opacity="0.9"
+               animation="property: rotation; to: 0 360 0; loop: true; dur: 5000;"></a-image>
+      <a-image src="https://www.pngkey.com/png/full/0-8978_cloud-png.png" position="0 0.4 0" width="1" height="1" opacity="0.9"
+               animation="property: rotation; to: 0 360 0; loop: true; dur: 5000;"></a-image>
+      <a-image src="https://www.pngkey.com/png/full/0-8288_heart-png.png" position="0 0.6 0" width="1" height="1" opacity="0.9"
+               animation="property: rotation; to: 0 360 0; loop: true; dur: 5000;"></a-image>
       <a-text value="Hello AR World!" position="0 1.25 0" align="center" color="#FFF"></a-text>
     </a-marker>
     
-    <!-- Custom marker with different content -->
+    <!-- Kanji marker with sphere -->
     <a-marker type="pattern" url="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/data/patt.kanji" id="kanjiMarker">
       <a-sphere position="0 0.5 0" radius="0.5" material="color: blue; opacity: 0.7;" 
                 animation="property: position; to: 0 1.5 0; dir: alternate; dur: 2000; loop: true;"></a-sphere>
     </a-marker>
     
-    <!-- The camera entity - this is what shows the camera view -->
+    <!-- The camera entity -->
     <a-entity camera></a-entity>
   </a-scene>
   
@@ -85,7 +88,7 @@
       
       // Update status when HIRO marker is found
       hiroMarker.addEventListener('markerFound', function() {
-        overlay.textContent = 'HIRO marker found! Showing red cube.';
+        overlay.textContent = 'HIRO marker found! Showing layered PNGs (star, cloud, heart).';
         setTimeout(() => { overlay.style.opacity = 0.5; }, 2000);
       });
       
@@ -105,7 +108,7 @@
       infoButton.addEventListener('click', function() {
         alert('AR Marker Information:\n\n' +
               '1. This app looks for two marker images:\n' +
-              '   - HIRO marker (shows a red cube)\n' +
+              '   - HIRO marker (shows layered PNGs: star, cloud, heart)\n' +
               '   - Kanji marker (shows a blue sphere)\n\n' +
               '2. Search for "HIRO marker AR.js" and "Kanji marker AR.js" to find these images\n\n' +
               '3. Either print the markers or display them on another screen\n\n' +
