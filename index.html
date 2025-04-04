@@ -34,10 +34,10 @@
     <!-- Custom marker with stacked PNGs -->
     <a-marker type="pattern" url="./Assets/aog-marker.patt" id="aogMarker">
       <a-image src="Assets/5.png" position="0 0 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
-      <a-image src="Assets/4.png" position="0 0 0.5" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
-      <a-image src="Assets/3.png" position="0 0 1" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
-      <a-image src="Assets/2.png" position="0 0 1.5" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
-      <a-image src="Assets/1.png" position="0 0 2" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
+      <a-image src="Assets/4.png" position="0 0.5 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
+      <a-image src="Assets/3.png" position="0 1 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
+      <a-image src="Assets/2.png" position="0 1.5 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
+      <a-image src="Assets/1.png" position="0 2 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
     </a-marker>
 
     <!-- Camera entity -->
@@ -50,6 +50,22 @@
       const kanjiMarker = document.querySelector('#kanjiMarker');
       const aogMarker = document.querySelector('#aogMarker');
       const infoButton = document.querySelector('#btnInfo');
+
+      // Function to adjust image height based on aspect ratio
+      function adjustImageAspect(imageElement) {
+        const img = new Image();
+        img.src = imageElement.getAttribute('src');
+        img.onload = function() {
+          const aspectRatio = img.height / img.width; // e.g., 400/800 = 0.5
+          const width = parseFloat(imageElement.getAttribute('width')); // Base width (1)
+          const newHeight = width * aspectRatio; // Scale height proportionally
+          imageElement.setAttribute('height', newHeight);
+        };
+      }
+
+      // Apply aspect ratio adjustment to all images
+      const images = document.querySelectorAll('a-image');
+      images.forEach(img => adjustImageAspect(img));
 
       kanjiMarker.addEventListener('markerFound', function () {
         overlay.textContent = 'Kanji marker found! Showing trial from Grok.';
