@@ -24,17 +24,20 @@
 
     <!-- Kanji marker with sphere -->
     <a-marker type="pattern" url="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/data/patt.kanji" id="kanjiMarker">
-      <a-sphere position="0 0.5 0" radius="0.5" material="color: blue; opacity: 0.7;" 
-                animation="property: position; to: 0 1.5 0; dir: alternate; dur: 2000; loop: true;"></a-sphere>
+      <a-image src="Assets/1.png" position="0 0 0.005" width="1" height="1" opacity="1"></a-image>
+      <a-image src="Assets/2.png" position="0 0 0.01" width="1" height="1" opacity="1"></a-image>
+      <a-image src="Assets/3.png" position="0 0 0.015" width="1" height="1" opacity="1"></a-image>
+      <a-image src="Assets/4.png" position="0 0 0.02" width="1" height="1" opacity="1"></a-image>
+      <a-image src="Assets/5.png" position="0 0 0.025" width="1" height="1" opacity="1"></a-image>
     </a-marker>
 
     <!-- Custom marker with stacked PNGs -->
     <a-marker type="pattern" url="./Assets/aog-marker.patt" id="aogMarker">
       <a-image src="Assets/5.png" position="0 0 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
       <a-image src="Assets/4.png" position="0 0 0.5" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
-      <a-image src="Assets/3.png" position="0 0 1" width="1" height="1" opacity="1" rotation="0 0 0" look-at="[camera]"></a-image>
-      <a-image src="Assets/2.png" position="0 0 1.5" width="1" height="1" opacity="1" rotation="0 0 0" look-at="[camera]"></a-image>
-      <a-image src="Assets/1.png" position="0 0 2" width="1" height="1" opacity="1" rotation="90 0 0"></a-image>
+      <a-image src="Assets/3.png" position="0 0 1" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
+      <a-image src="Assets/2.png" position="0 0 1.5" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
+      <a-image src="Assets/1.png" position="0 0 2" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
     </a-marker>
 
     <!-- Camera entity -->
@@ -49,7 +52,7 @@
       const infoButton = document.querySelector('#btnInfo');
 
       kanjiMarker.addEventListener('markerFound', function () {
-        overlay.textContent = 'Kanji marker found! Showing blue sphere.';
+        overlay.textContent = 'Kanji marker found! Showing trial from Grok.';
         setTimeout(() => { overlay.style.opacity = 0.5; }, 2000);
       });
 
