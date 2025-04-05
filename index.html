@@ -15,21 +15,10 @@
   </style>
 </head>
 <body>
-  <div class="ar-overlay">Looking for marker image...</div>
-  <div class="controls">
-    <button id="btnInfo">Show Marker Info</button>
-  </div>
 
   <!-- <a-scene embedded arjs="sourceType: webcam; sourceWidth:1280; sourceHeight:960; displayWidth:1280; displayHeight:960; debugUIEnabled: false; detectionMode: mono_and_matrix;"> -->
 
     <a-scene embedded arjs="sourceType: webcam; sourceWidth:1280; sourceHeight:960; displayWidth:1280; displayHeight:960; debugUIEnabled: false; detectionMode: mono_and_matrix; smooth: true; smoothCount: 5; smoothTolerance: 0.01; smoothThreshold: 5; smoothingFactor: 0.6; maxDetectionRate: 60;">
-    <!-- Kanji marker with sphere -->
-    <a-marker type="pattern" url="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/data/patt.kanji" id="kanjiMarker">
-      <a-image src="Assets/hi-1.png" position="0 0 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
-      <a-image src="Assets/hi-2.png" position="0 0.3 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
-      <a-image src="Assets/hi-3.png" position="0 0.6 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
-      <a-image src="Assets/hi-4.png" position="0 0.9 0" width="1" height="1" opacity="1" rotation="-90 0 0"></a-image>
-    </a-marker>
 
     <!-- Custom marker with stacked PNGs -->
     <a-marker type="pattern" url="./Assets/aog-marker.patt" id="aogMarker">
@@ -46,10 +35,7 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
-      const overlay = document.querySelector('.ar-overlay');
-      const kanjiMarker = document.querySelector('#kanjiMarker');
       const aogMarker = document.querySelector('#aogMarker');
-      const infoButton = document.querySelector('#btnInfo');
 
       // Function to adjust image height based on aspect ratio
       function adjustImageAspect(imageElement) {
@@ -67,30 +53,6 @@
       const images = document.querySelectorAll('a-image');
       images.forEach(img => adjustImageAspect(img));
 
-      kanjiMarker.addEventListener('markerFound', function () {
-        overlay.textContent = 'Kanji marker found! Showing trial from Grok.';
-        setTimeout(() => { overlay.style.opacity = 0.5; }, 2000);
-      });
-
-      aogMarker.addEventListener('markerFound', function () {
-        overlay.textContent = 'Custom marker found! Showing stacked PNGs.';
-        setTimeout(() => { overlay.style.opacity = 0.5; }, 2000);
-      });
-
-      aogMarker.addEventListener('markerLost', function () {
-        overlay.style.opacity = 1;
-        overlay.textContent = 'Marker lost. Looking for markers...';
-      });
-
-      infoButton.addEventListener('click', function () {
-        alert('AR Marker Information:\n\n' +
-          '1. This app looks for three marker images:\n' +
-          '   - Kanji marker (shows a blue sphere)\n' +
-          '   - Custom marker (shows stacked PNGs)\n\n' +
-          '2. Search for "HIRO marker AR.js" and "Kanji marker AR.js" or use your custom marker\n\n' +
-          '3. Either print the markers or display them on another screen\n\n' +
-          '4. Make sure there is good lighting and the marker is clearly visible');
-      });
     });
   </script>
 </body>
