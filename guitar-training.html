@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>12-Chord Guitar Detector</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin-top: 50px;
+  background-color: #f5f5f5;
+  color: #333;
+}
+#chord-display {
+  font-size: 4em;
+  margin: 30px 0;
+  font-weight: bold;
+  color: #2c3e50;
+}
+button {
+  padding: 12px 24px;
+  font-size: 1.2em;
+  cursor: pointer;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+button:hover {
+  background-color: #2980b9;
+}
+button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+.note-display {
+  margin-top: 20px;
+  font-size: 1.2em;
+  color: #7f8c8d;
+}
+.chord-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px auto;
+  max-width: 800px;
+}
+.chord-item {
+  background-color: #ecf0f1;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+.chord-item.detected {
+  background-color: #2ecc71;
+  color: white;
+}
+.settings {
+  margin: 20px auto;
+  max-width: 400px;
+  text-align: left;
+  padding: 15px;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.settings label {
+  display: block;
+  margin: 10px 0 5px;
+}
+</style>
+</head>
+<body>
+<h1>Guitar Chord Detection</h1>
+<h2>Focused on 12 Common Chords</h2>
+
+<div class="settings">
+  <label for="threshold">Sensitivity:</label>
+  <input type="range" id="threshold" min="-100" max="-50" value="-70">
+  <label for="stability">Stability (frames):</label>
+  <input type="range" id="stability" min="1" max="10" value="5">
+</div>
+
+<button id="start-btn">Start Detection</button>
+<div id="chord-display">Press Start</div>
+<div id="notes-display" class="note-display">Detected Notes: </div>
+
+<div class="chord-sheet">
+  <div class="chord-item" data-chord="C">C</div>
+  <div class="chord-item" data-chord="G">G</div>
+  <div class="chord-item" data-chord="D">D</div>
+  <div class="chord-item" data-chord="Em">Em</div>
+  <div class="chord-item" data-chord="Am">Am</div>
+  <div class="chord-item" data-chord="Bm">Bm</div>
+  <div class="chord-item" data-chord="Bm-alt">Bm (alt)</div>
+  <div class="chord-item" data-chord="A">A</div>
+  <div class="chord-item" data-chord="F">F</div>
+  <div class="chord-item" data-chord="F-alt">F (alt)</div>
+  <div class="chord-item" data-chord="E">E</div>
+  <div class="chord-item" data-chord="Dm">Dm</div>
+</div>
+
+<script>
+class GuitarChordDetector {
+  constructor() {
+    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    this.noteFrequencies = this.getAllNoteFrequencies();
+    this.chordDatabase = this.buildCustomChordDatabase();
+    this.bufferSize = 4096;
+    this.confidenceThreshold = -70; // Default, will be adjustable
+    this.previousChord = null;
+    this.stabilityCounter = 0;
+    this.requiredStability = 5; // Default, will be adjustable
+    this.lastDetectedNotes = [];
+  }
+
+  async start() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.analyzeStream(stream);
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      document.getElementById("chord-display").innerText = "Microphone access denied";
+    }
+  }
+
+  analyzeStream(stream) {
+    const source = this.audioContext.createMediaStreamSource(stream);
+    const analyser = this.audioContext.createAnalyser();
+    
+    analyser.fftSize = this.bufferSize;
+    analyser.smoothingTimeConstant = 0.85;
+    source.connect(analyser);
+    
+    const dataArray = new Float32Array(analyser.frequencyBinCount);
+    
+    const detect = () => {
+      // Get current settings
+      this.confidenceThreshold = parseInt(document.getElementById("threshold").value);
+      this.requiredStability = parseInt(document.getElementById("stability").value);
+      
+      analyser.getFloatFrequencyData(dataArray);
+      const detectedNotes = this.getDetectedNotes(dataArray);
+      
+      // Simple noise filtering - ignore sudden changes with few notes
+      if (detectedNotes.length < 2 && this.lastDetectedNotes.length > 3) {
+        // Likely just noise, keep previous notes
+      } else {
+        this.lastDetectedNotes = detectedNotes;
+      }
+      
+      const detectedChord = this.matchChord(this.lastDetectedNotes);
+      
+      // Display detected notes for debugging
+      document.getElementById("notes-display").innerText = 
+        `Detected Notes: ${this.lastDetectedNotes.join(", ") || "None"}`;
+      
+      // Update the chord items in the chord sheet
+      document.querySelectorAll('.chord-item').forEach(item => {
+        item.classList.remove('detected');
+      });
+      
+      // Chord stability logic
+      if (detectedChord === this.previousChord) {
+        this.stabilityCounter++;
+        if (this.stabilityCounter >= this.requiredStability) {
+          document.getElementById("chord-display").innerText = 
+            detectedChord ? this.formatChordName(detectedChord) : "No chord";
+          
+          // Highlight the detected chord
+          if (detectedChord) {
+            const chordItem = document.querySelector(`.chord-item[data-chord="${detectedChord}"]`);
+            if (chordItem) chordItem.classList.add('detected');
+          }
+        }
+      } else {
+        this.previousChord = detectedChord;
+        this.stabilityCounter = 0;
+      }
+      
+      requestAnimationFrame(detect);
+    };
+    
+    detect();
+  }
+  
+  formatChordName(chordId) {
+    // Convert chord IDs to display names
+    const displayNames = {
+      "C": "C",
+      "G": "G",
+      "D": "D",
+      "Em": "Em",
+      "Am": "Am",
+      "Bm": "Bm",
+      "Bm-alt": "Bm (alt)",
+      "A": "A",
+      "F": "F",
+      "F-alt": "F (alt)",
+      "E": "E",
+      "Dm": "Dm"
+    };
+    
+    return displayNames[chordId] || chordId;
+  }
+
+  getDetectedNotes(dataArray) {
+    let detectedNotes = [];
+    const noteStrengths = {};
+    
+    // Find peaks in the frequency spectrum
+    for (let i = 0; i < dataArray.length; i++) {
+      const frequency = i * this.audioContext.sampleRate / this.bufferSize;
+      if (frequency < 80 || frequency > 1200) continue; // Focus on guitar frequency range
+      
+      const amplitude = dataArray[i];
+      
+      if (amplitude > this.confidenceThreshold) {
+        // Find the closest note to this frequency
+        const closestNote = this.findClosestNote(frequency);
+        if (closestNote) {
+          const [note, _] = closestNote;
+          // Track the highest amplitude for each note
+          if (!noteStrengths[note] || amplitude > noteStrengths[note]) {
+            noteStrengths[note] = amplitude;
+          }
+        }
+      }
+    }
+    
+    // Keep only the strongest notes (top 6 maximum - guitar has 6 strings)
+    const sortedNotes = Object.keys(noteStrengths).sort(
+      (a, b) => noteStrengths[b] - noteStrengths[a]
+    ).slice(0, 6);
+    
+    return sortedNotes;
+  }
+
+  findClosestNote(frequency) {
+    // Find the note closest to the given frequency
+    let closestNote = null;
+    let minDistance = Infinity;
+    
+    for (const noteFreq of this.noteFrequencies) {
+      const [note, freq] = noteFreq;
+      const distance = Math.abs(freq - frequency);
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestNote = noteFreq;
+      }
+    }
+    
+    // Only return if within reasonable distance (7% tolerance)
+    const [_, freq] = closestNote;
+    if (minDistance < freq * 0.07) {
+      return closestNote;
+    }
+    return null;
+  }
+
+  matchChord(detectedNotes) {
+    if (detectedNotes.length < 2) return null;
+    
+    // Calculate match score for each chord
+    const scores = {};
+    for (const [chord, chordNotes] of Object.entries(this.chordDatabase)) {
+      // For each chord, calculate how well it matches the detected notes
+      
+      // Count notes from the chord that we detected
+      let chordNotesFound = 0;
+      for (const note of chordNotes) {
+        if (detectedNotes.includes(note)) {
+          chordNotesFound++;
+        }
+      }
+      
+      // Count extra notes we detected that aren't in the chord
+      let extraNotes = 0;
+      for (const note of detectedNotes) {
+        if (!chordNotes.includes(note)) {
+          extraNotes++;
+        }
+      }
+      
+      // Calculate a score based on:
+      // 1. How many of the chord's notes we found (more is better)
+      // 2. How many extra notes we found (fewer is better)
+      // 3. More weight on finding the critical chord notes (root, third, fifth)
+      
+      // Start with the basic ratio of found notes
+      let score = chordNotesFound / chordNotes.length;
+      
+      // Penalize for extra notes
+      score -= (extraNotes * 0.15);
+      
+      // Boost score based on percentage of chord notes found
+      if (chordNotesFound >= chordNotes.length * 0.75) {
+        score += 0.2; // Significant boost if we found most of the chord
+      }
+      
+      // Bonus for detecting root note (typically the lowest note in the chord)
+      const rootNote = chordNotes[0];
+      if (detectedNotes.includes(rootNote)) {
+        score += 0.15;
+      }
+      
+      scores[chord] = score;
+    }
+    
+    // Find chord with highest score above threshold
+    let bestChord = null;
+    let bestScore = 0.6; // Minimum threshold to consider a match
+    
+    for (const [chord, score] of Object.entries(scores)) {
+      if (score > bestScore) {
+        bestScore = score;
+        bestChord = chord;
+      }
+    }
+    
+    return bestChord;
+  }
+
+  getAllNoteFrequencies() {
+    // Generate frequencies for multiple octaves
+    const baseNotes = [
+      ["C", 261.63], ["C#", 277.18], ["D", 293.66], ["D#", 311.13],
+      ["E", 329.63], ["F", 349.23], ["F#", 369.99], ["G", 392.00],
+      ["G#", 415.30], ["A", 440.00], ["A#", 466.16], ["B", 493.88]
+    ];
+    
+    const allNotes = [];
+    
+    // Generate 4 octaves of notes (covering typical guitar range)
+    for (let octave = 0; octave < 5; octave++) {
+      for (const [note, freq] of baseNotes) {
+        // Calculate frequency for this octave
+        const octaveFreq = freq * Math.pow(2, octave - 2);
+        allNotes.push([note, octaveFreq]);
+      }
+    }
+    
+    return allNotes;
+  }
+
+  buildCustomChordDatabase() {
+    // Custom chord database focusing on the 12 target chords
+    // Each chord has the notes that would typically be played on a guitar
+    return {
+      // Major chords
+      "C": ["C", "E", "G", "C", "E"], // C major (x32010)
+      "G": ["G", "B", "D", "G", "B", "G"], // G major (320003)
+      "D": ["D", "A", "D", "F#"], // D major (xx0232)
+      "A": ["A", "E", "A", "C#", "E"], // A major (x02220)
+      "E": ["E", "B", "E", "G#", "B", "E"], // E major (022100)
+      "F": ["F", "A", "C", "F", "C"], // F major (133211) - barre chord
+      "F-alt": ["F", "C", "F", "A", "C"], // F major (xx3211) - easy version
+      
+      // Minor chords
+      "Em": ["E", "B", "E", "G", "B", "E"], // E minor (022000)
+      "Am": ["A", "E", "A", "C", "E"], // A minor (x02210)
+      "Dm": ["D", "A", "D", "F"], // D minor (xx0231)
+      "Bm": ["B", "F#", "B", "D", "F#", "B"], // B minor (x24432) - barre chord
+      "Bm-alt": ["B", "F#", "B", "D", "F#"] // B minor (x04430) - easier version
+    };
+  }
+}
+
+document.getElementById("start-btn").addEventListener("click", async () => {
+  const detector = new GuitarChordDetector();
+  await detector.start();
+  document.getElementById("start-btn").disabled = true;
+  document.getElementById("start-btn").innerText = "Detection Running";
+  
+  // Resume audio context (needed due to browser autoplay policies)
+  if (detector.audioContext.state === "suspended") {
+    await detector.audioContext.resume();
+  }
+});
+</script>
+</body>
+</html>
