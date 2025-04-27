@@ -79,7 +79,7 @@ button:disabled {
 
 <div class="settings">
   <label for="threshold">Sensitivity:</label>
-  <input type="range" id="threshold" min="-100" max="-50" value="-70">
+  <input type="range" id="threshold" min="-100" max="-30" value="-70">
   <label for="stability">Stability (frames):</label>
   <input type="range" id="stability" min="1" max="10" value="5">
 </div>
@@ -87,6 +87,7 @@ button:disabled {
 <button id="start-btn">Start Detection</button>
 <div id="chord-display">Press Start</div>
 <div id="notes-display" class="note-display">Detected Notes: </div>
+<div id="freq-display" class="note-display"></div>
 
 <div class="chord-sheet">
   <div class="chord-item" data-chord="C">C</div>
@@ -108,6 +109,7 @@ class GuitarChordDetector {
   constructor() {
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
     this.noteFrequencies = this.getAllNoteFrequencies();
+    console.log(this.noteFrequencies);
     this.chordDatabase = this.buildCustomChordDatabase();
     this.bufferSize = 4096;
     this.confidenceThreshold = -70; // Default, will be adjustable
@@ -142,7 +144,10 @@ class GuitarChordDetector {
       this.confidenceThreshold = parseInt(document.getElementById("threshold").value);
       this.requiredStability = parseInt(document.getElementById("stability").value);
       
+      // console.log("test");
+      // console.log(dataArray);
       analyser.getFloatFrequencyData(dataArray);
+      // console.log(dataArray);
       const detectedNotes = this.getDetectedNotes(dataArray);
       
       // Simple noise filtering - ignore sudden changes with few notes
@@ -208,6 +213,7 @@ class GuitarChordDetector {
   }
 
   getDetectedNotes(dataArray) {
+    // console.log("getDetectedNotes");
     let detectedNotes = [];
     const noteStrengths = {};
     
@@ -218,11 +224,19 @@ class GuitarChordDetector {
       
       const amplitude = dataArray[i];
       
+      // console.log("here");
       if (amplitude > this.confidenceThreshold) {
         // Find the closest note to this frequency
         const closestNote = this.findClosestNote(frequency);
         if (closestNote) {
           const [note, _] = closestNote;
+          // if(note == "E3" || note == "E5" ) {
+          //   console.log("amplitude : " + amplitude + ", frequency : " + frequency);
+          //   console.log("dataArray : ");
+          //   console.log(dataArray);
+          //   console.log(i);
+          //   // detectedNotes.push(note);
+          // }
           // Track the highest amplitude for each note
           if (!noteStrengths[note] || amplitude > noteStrengths[note]) {
             noteStrengths[note] = amplitude;
@@ -328,23 +342,32 @@ class GuitarChordDetector {
   getAllNoteFrequencies() {
     // Generate frequencies for multiple octaves
     const baseNotes = [
-      ["C", 261.63], ["C#", 277.18], ["D", 293.66], ["D#", 311.13],
-      ["E", 329.63], ["F", 349.23], ["F#", 369.99], ["G", 392.00],
-      ["G#", 415.30], ["A", 440.00], ["A#", 466.16], ["B", 493.88]
+      ["C2", 65.41], ["C#2", 69.30], ["D2", 73.42], ["D#2", 77.78],
+      ["E2", 82.41], ["F2", 87.31], ["F#2", 92.50], ["G2", 98.00],
+      ["G#2", 103.8], ["A2", 110.0], ["A#2", 116.5], ["B2", 123.5],
+      ["C3", 130.8], ["C#3", 138.6], ["D3", 146.8], ["D#3", 155.6],
+      ["E3", 164.8], ["F3", 174.6], ["F#3", 185.0], ["G3", 196.0],
+      ["G#3", 207.7], ["A3", 220.0], ["A#3", 233.1], ["B3", 246.9],
+      ["C4", 261.63], ["C#4", 277.18], ["D4", 293.66], ["D#4", 311.13],
+      ["E4", 329.63], ["F4", 349.23], ["F#4", 369.99], ["G4", 392.00],
+      ["G#4", 415.30], ["A4", 440.00], ["A#4", 466.16], ["B4", 493.88],
+      ["C5", 523.3], ["C#5", 554.4], ["D5", 587.3], ["D#5", 622.3],
+      ["E5", 659.3], ["F5", 698.5], ["F#5", 740.0], ["G5", 784.0],
+      ["G#5", 830.6], ["A5", 880.0], ["A#5", 932.3], ["B5", 987.8],
     ];
     
-    const allNotes = [];
+    // const allNotes = [];
     
-    // Generate 4 octaves of notes (covering typical guitar range)
-    for (let octave = 0; octave < 5; octave++) {
-      for (const [note, freq] of baseNotes) {
-        // Calculate frequency for this octave
-        const octaveFreq = freq * Math.pow(2, octave - 2);
-        allNotes.push([note, octaveFreq]);
-      }
-    }
+    // // Generate 4 octaves of notes (covering typical guitar range)
+    // for (let octave = 0; octave < 5; octave++) {
+    //   for (const [note, freq] of baseNotes) {
+    //     // Calculate frequency for this octave
+    //     const octaveFreq = freq * Math.pow(2, octave - 2);
+    //     allNotes.push([note, octaveFreq]);
+    //   }
+    // }
     
-    return allNotes;
+    return baseNotes;
   }
 
   buildCustomChordDatabase() {
@@ -352,13 +375,13 @@ class GuitarChordDetector {
     // Each chord has the notes that would typically be played on a guitar
     return {
       // Major chords
-      "C": ["C", "E", "G", "C", "E"], // C major (x32010)
-      "G": ["G", "B", "D", "G", "B", "G"], // G major (320003)
-      "D": ["D", "A", "D", "F#"], // D major (xx0232)
-      "A": ["A", "E", "A", "C#", "E"], // A major (x02220)
-      "E": ["E", "B", "E", "G#", "B", "E"], // E major (022100)
-      "F": ["F", "A", "C", "F", "C"], // F major (133211) - barre chord
-      "F-alt": ["F", "C", "F", "A", "C"], // F major (xx3211) - easy version
+      "C": ["E2", "C3", "E3", "G3", "C4", "E4"], // C major (x32010)
+      "G": ["G2", "B3", "D3", "G3", "B3", "G4"], // G major (320003)
+      "D": ["E2", "A2", "D3", "A3", "D4", "F#4"], // D major (xx0232)
+      "A": ["E2", "A2", "E3", "A3", "C#4", "E4"], // A major (x02220)
+      "E": ["E2", "B2", "E3", "G#3", "B3", "E4"], // E major (022100)
+      "F": ["F2", "C3", "F3", "A3", "C4", "F4"], // F major (133211) - barre chord
+      "F-alt": ["F3", "A3", "C4", "F4"], // F major (xx3211) - easy version
       
       // Minor chords
       "Em": ["E", "B", "E", "G", "B", "E"], // E minor (022000)
