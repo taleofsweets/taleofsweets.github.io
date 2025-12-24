@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Display</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Smooth fade-in animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        /* Customize the main scrollbar to blend in better 
+           (Optional, but looks premium)
+        */
+        body::-webkit-scrollbar {
+            width: 10px;
+        }
+        body::-webkit-scrollbar-track {
+            background: #030712;
+        }
+        body::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 5px;
+        }
+        body::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 min-h-screen w-full relative text-white">
+
+    <!-- 
+      BACKGROUND LAYER 
+      Changed to 'fixed' so it stays put while you scroll down the long image.
+    -->
+    <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <img 
+            id="bg-image"
+            src="website.png" 
+            alt="Background Blur" 
+            class="w-full h-full object-cover filter blur-3xl opacity-40 scale-110 brightness-75"
+            onerror="this.style.display='none'"
+        >
+        <!-- Darker overlay to make the main content pop more -->
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+    </div>
+
+    <!-- 
+      MAIN CONTENT LAYER 
+      - Removed 'h-screen' to allow scrolling.
+      - 'py-0 md:py-12': No padding on mobile (full bleed), spacing on desktop.
+    -->
+    <main class="relative z-10 w-full flex justify-center py-0 md:py-12">
+        
+        <!-- 
+          MAIN IMAGE CONTAINER
+          - 'w-full md:max-w-2xl': Full width on phone, restricted width on desktop (approx 672px).
+          - This perfectly mimics a mobile view on a desktop screen.
+        -->
+        <div class="relative w-full md:max-w-2xl group">
+            <img 
+                id="main-image"
+                src="website.png" 
+                alt="Main Display" 
+                class="animate-fade-in w-full h-auto object-contain shadow-[0_35px_60px_-15px_rgba(0,0,0,0.6)] rounded-none md:rounded-2xl border-0 md:border md:border-white/10"
+                onerror="handleImageError(this)"
+            >
+            
+            <!-- Error Message Display -->
+            <div id="error-msg" class="hidden absolute inset-0 h-[50vh] flex items-center justify-center bg-gray-900/90 rounded-xl border border-red-500/50 p-6 text-center mx-4 mt-20">
+                <div>
+                    <svg class="w-12 h-12 text-red-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <h3 class="text-lg font-bold text-white mb-1">Image Not Found</h3>
+                    <p class="text-gray-400 text-sm">Could not load <code class="bg-black px-1 py-0.5 rounded text-yellow-500">website.png</code></p>
+                    <p class="text-gray-500 text-xs mt-2">Make sure this HTML file is in the same folder as your image.</p>
+                </div>
+            </div>
+        </div>
+        
+    </main>
+
+    <script>
+        function handleImageError(img) {
+            img.style.display = 'none';
+            document.getElementById('error-msg').classList.remove('hidden');
+            document.getElementById('bg-image').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
